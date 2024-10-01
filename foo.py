@@ -18,9 +18,9 @@ def disconnect(sid):
 
 @sio.event
 def pull_trigger(sid, data):
-    # x, y = get_button_pos_multi_scale('measure_button.png')
-    # pyautogui.click(x, y)
-    print(data)
+    x, y = get_button_pos_multi_scale(data)
+    pyautogui.click(x, y)
+    # print(data)
     return 'ok'
 
 def get_button_pos_multi_scale(button_template_path: str) -> tuple[int]:
@@ -43,7 +43,7 @@ def get_button_pos_multi_scale(button_template_path: str) -> tuple[int]:
 
     found = None
     # loop over the scales of the image
-    for scale in np.linspace(0.2, 2.0, 40)[::-1]:
+    for scale in np.linspace(0.2, 2.0, 10)[::-1]:
         # resize the image according to the scale, and keep track
         # of the ratio of the resizing
         resized = imutils.resize(gray, width = int(gray.shape[1] * scale))
