@@ -1,0 +1,7 @@
+pyautogui
+opencv-python
+python-socketio[client]
+python-socketio
+numpy
+imutils
+eventlet
