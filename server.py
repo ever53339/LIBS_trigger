@@ -12,11 +12,16 @@ class Z300WebServer:
     A server class for the SciAps Z300 LIBS gun based on GUI automation.
     """
     def __init__(self):
-        self.sio = socketio.Server()
+        self.sio = socketio.Server(cors_allowed_origins='*')
         self.app = socketio.WSGIApp(self.sio)
         self.button_detected = False
         self.detected_x, self.detected_y = None, None
         self.desktop_id = 1
+
+        self.sio.on('connect', self.on_connect)
+        self.sio.on('disconnect', self.on_disconnect)
+        self.sio.on('pull_trigger', self.on_pull_trigger)
+        self.sio.on('set_desktop_id', self.on_set_desktop_id)
 
     def on_connect(self, sid, environ, auth):
         print('connect ', sid)
@@ -43,7 +48,7 @@ class Z300WebServer:
             
             return 'ok'
 
-    def on_set_desktop_id(self, data):
+    def on_set_desktop_id(self, sid, data):
         self.desktop_id = data
         print(f'Virtual desktop id for Profile Builder has been set to {self.desktop_id}.')
 
