@@ -17,7 +17,7 @@ print(get_virtual_desktops())
 # print(f"Moved window {current_window.hwnd} to {target_desktop.number}")
 
 # print("Going to desktop number 1")
-# VirtualDesktop(1).go()
+VirtualDesktop(2).go()
 
 # print("Pinning the current window")
 # AppView.current().pin()
