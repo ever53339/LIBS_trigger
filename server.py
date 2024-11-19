@@ -11,7 +11,6 @@ class Z300WebServer:
     A server class for the SciAps Z300 LIBS gun based on GUI automation.
     """
     def __init__(self):
-        pass
         self.sio = socketio.Server()
         self.app = socketio.WSGIApp(self.sio)
         self.button_detected = False
