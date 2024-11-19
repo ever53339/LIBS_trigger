@@ -5,6 +5,7 @@ import cv2
 import numpy as np
 import imutils
 import eventlet
+from pyvda import AppView, get_apps_by_z_order, VirtualDesktop, get_virtual_desktops
 
 class Z300WebServer:
     """
@@ -16,6 +17,7 @@ class Z300WebServer:
         self.app = socketio.WSGIApp(self.sio)
         self.button_detected = False
         self.detected_x, self.detected_y = None, None
+        self.desktop_id = 1
 
     def on_connect(self, sid, environ, auth):
         print('connect ', sid)
@@ -24,10 +26,28 @@ class Z300WebServer:
         print('disconnect ', sid)
 
     def on_pull_trigger(self, sid, data):
-        x, y = self.get_button_pos_multi_scale(data)
-        pyautogui.click(x, y)
-        # print(data)
-        return 'ok'
+        if self.desktop_id > len(get_virtual_desktops()):
+            print('target desktop does not exist.')
+            return 'non-existing desktop' 
+        else:
+            x, y = self.get_button_pos_multi_scale(data)
+            # move to the desktop where profile builder was opened
+            current_desktop = VirtualDesktop.current()
+            target_desktop = VirtualDesktop(self.desktop_id)
+            
+            target_desktop.go()
+            # click trigger button on the target desktop
+            pyautogui.click(x, y)
+
+            # move back to the original desktop
+            current_desktop.go()
+            
+            return 'ok'
+
+    def on_set_desktop_id(self, data):
+        self.desktop_id = data
+        print(f'Virtual desktop id for Profile Builder has been set to {self.desktop_id}.')
+
 
     def get_button_pos_multi_scale(self, button_template_path: str) -> tuple[int]:
         """
