@@ -6,22 +6,27 @@ import numpy as np
 import imutils
 import eventlet
 from pyvda import AppView, get_apps_by_z_order, VirtualDesktop, get_virtual_desktops
+from enum import Enum
+import time
+import threading
 
 class Z300WebServer:
     """
     A server class for the SciAps Z300 LIBS gun based on GUI automation.
     """
     def __init__(self):
-        self.sio = socketio.Server(cors_allowed_origins='*')
+        self.sio = socketio.Server(cors_allowed_origins='*', async_mode='eventlet')
         self.app = socketio.WSGIApp(self.sio)
         self.button_detected = False
         self.detected_x, self.detected_y = None, None
         self.desktop_id = 1
+        self.status = 'idle'
 
         self.sio.on('connect', self.on_connect)
         self.sio.on('disconnect', self.on_disconnect)
         self.sio.on('pull_trigger', self.on_pull_trigger)
         self.sio.on('set_desktop_id', self.on_set_desktop_id)
+        self.sio.on('get_status', self.on_get_status)
 
     def on_connect(self, sid, environ, auth):
         print('connect ', sid)
@@ -52,7 +57,11 @@ class Z300WebServer:
         self.desktop_id = data
         print(f'Virtual desktop id for Profile Builder has been set to {self.desktop_id}.')
 
-
+    def update_status(self):
+        while True:
+            self.sio.sleep(0.5)
+            self.sio.emit('status', self.status)
+        
     def get_button_pos_multi_scale(self, button_template_path: str) -> tuple[int]:
         """
         returns the (x, y) coordinates of the center 
@@ -124,4 +133,7 @@ class Z300WebServer:
 
 if __name__ == '__main__':
     z300_web_server = Z300WebServer()
+    z300_web_server.sio.start_background_task(z300_web_server.update_status)
     eventlet.wsgi.server(eventlet.listen(('', 1234)), z300_web_server.app)
+
+

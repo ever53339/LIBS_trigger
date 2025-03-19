@@ -1,23 +1,32 @@
-from pyvda import AppView, get_apps_by_z_order, VirtualDesktop, get_virtual_desktops
+import socketio
+
+a = socketio.Client()
 
 
-print(get_virtual_desktops())
-# a = get_apps_by_z_order()
-# a = [k.app_id for k in a]
-# print(a)
-# number_of_active_desktops = len(get_virtual_desktops())
-# print(f"There are {number_of_active_desktops} active desktops")
 
-# current_desktop = VirtualDesktop.current()
-# print(f"Current desktop is number {current_desktop.number}")
+@a.event
+def connect():
+    print("I'm connected!")
 
-# current_window = AppView.current()
-# target_desktop = VirtualDesktop(1)
-# current_window.move(target_desktop)
-# print(f"Moved window {current_window.hwnd} to {target_desktop.number}")
+@a.event
+def connect_error(data):
+    print("The connection failed!")
 
-# print("Going to desktop number 1")
-VirtualDesktop(2).go()
+@a.event
+def disconnect():
+    print("I'm disconnected!")
 
-# print("Pinning the current window")
-# AppView.current().pin()
+def status_hd(data):
+    print(data)
+    print('received data')
+    
+a.on('status', status_hd)
+
+
+# a.connect('http://localhost:8080')
+a.connect('http://localhost:1234')
+# b = a.emit('get_status', 'data', callback=my_callback)
+# print(b)
+# c = a.emit('get_status_options', data=None)
+# print(c)
+a.wait()
