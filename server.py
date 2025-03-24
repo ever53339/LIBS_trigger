@@ -9,24 +9,25 @@ from pyvda import AppView, get_apps_by_z_order, VirtualDesktop, get_virtual_desk
 from enum import Enum
 import time
 import threading
+from libs_analyzer import LIBSAnalyzer, AnalyzerStatus, DeviceRunningError, ButtonNotFoundError, UnkonwnButtonNameError
 
 class Z300WebServer:
     """
-    A server class for the SciAps Z300 LIBS gun based on GUI automation.
+    A socket.io server class for the SciAps Z300 LIBS gun based on GUI automation.
     """
     def __init__(self):
         self.sio = socketio.Server(cors_allowed_origins='*', async_mode='eventlet')
         self.app = socketio.WSGIApp(self.sio)
-        self.button_detected = False
-        self.detected_x, self.detected_y = None, None
-        self.desktop_id = 1
-        self.status = 'idle'
+
+        self.libs_analyzer = LIBSAnalyzer(cache_folder_path='C:/Users/username/Desktop/Cache', export_folder_path='C:/Users/username/Desktop/Export')
 
         self.sio.on('connect', self.on_connect)
         self.sio.on('disconnect', self.on_disconnect)
-        self.sio.on('pull_trigger', self.on_pull_trigger)
-        self.sio.on('set_desktop_id', self.on_set_desktop_id)
-        self.sio.on('get_status', self.on_get_status)
+        # self.sio.on('pull_trigger', self.on_pull_trigger)
+        # self.sio.on('set_desktop_id', self.on_set_desktop_id)
+        self.sio.on('measure', self.on_measure)
+        self.sio.on('export', self.on_export)
+        self.sio.on('analyze', self.on_analyze)
 
     def on_connect(self, sid, environ, auth):
         print('connect ', sid)
@@ -34,102 +35,48 @@ class Z300WebServer:
     def on_disconnect(self, sid):
         print('disconnect ', sid)
 
-    def on_pull_trigger(self, sid, data):
-        if self.desktop_id > len(get_virtual_desktops()):
-            print('target desktop does not exist.')
-            return 'non-existing desktop' 
+    def on_measure(self, sid, data):
+        if self.libs_analyzer.status == AnalyzerStatus.RUNNING:
+            return 'The analyzer is currently running. Please wait until it is done.'
         else:
-            x, y = self.get_button_pos_multi_scale(data)
-            # move to the desktop where profile builder was opened
-            current_desktop = VirtualDesktop.current()
-            target_desktop = VirtualDesktop(self.desktop_id)
-            
-            target_desktop.go()
-            # click trigger button on the target desktop
-            pyautogui.click(x, y)
+            try:
+                self.libs_analyzer.measure()
+            except Exception as e:
+                return str(e)
+            else:
+                return 'measurement done successfully'
+    
+    def on_export(self, sid, data):
+        if self.libs_analyzer.status == AnalyzerStatus.RUNNING:
+            return 'The analyzer is currently running. Please wait until it is done.'
+        else:
+            try:
+                self.libs_analyzer.export()
+            except Exception as e:
+                return str(e)
+            else:
+                return 'export done successfully'
+    
+    def on_analyze(self, sid, data):
+        if self.libs_analyzer.status == AnalyzerStatus.RUNNING:
+            return 'The analyzer is currently running. Please wait until it is done.'
+        else:
+            try:
+                res = self.libs_analyzer.analyze()
+            except Exception as e:
+                return str(e)
+            else:
+                return res
 
-            # move back to the original desktop
-            current_desktop.go()
-            
-            return 'ok'
-
-    def on_set_desktop_id(self, sid, data):
-        self.desktop_id = data
-        print(f'Virtual desktop id for Profile Builder has been set to {self.desktop_id}.')
+    # def on_set_desktop_id(self, sid, data):
+    #     self.desktop_id = data
+    #     print(f'Virtual desktop id for Profile Builder has been set to {self.desktop_id}.')
 
     def update_status(self):
         while True:
             self.sio.sleep(0.5)
-            self.sio.emit('status', self.status)
+            self.sio.emit('status', self.libs_analyzer.status.name)
         
-    def get_button_pos_multi_scale(self, button_template_path: str) -> tuple[int]:
-        """
-        returns the (x, y) coordinates of the center 
-        of the requested button in the screen window
-
-        Args:
-            button_template_path (str): path to the image file of the button template
-
-        Returns:
-            tuple[int]: the (x, y) coordinates of the center of the button
-        """
-        if self.button_detected:
-            # use button position cache if possible
-            print('button position has been computed')
-            print('using cached button position')
-            return self.detected_x, self.detected_y
-        else:
-            # locate and cache buttion position
-            print('computing button position')
-            screenshot = np.array(pyautogui.screenshot())
-            gray = cv2.cvtColor(screenshot, cv2.COLOR_RGB2GRAY)
-
-            template = cv2.imread(button_template_path, cv2.IMREAD_GRAYSCALE) # return shape(height * width, y * x)
-            template = cv2.Canny(template, 50, 200)
-            (template_height, template_width) = template.shape[:2]
-
-            found = None
-            # loop over the scales of the image
-            for scale in np.linspace(0.2, 2.0, 10)[::-1]:
-                # resize the image according to the scale, and keep track
-                # of the ratio of the resizing
-                resized = imutils.resize(gray, width = int(gray.shape[1] * scale))
-                r = gray.shape[1] / float(resized.shape[1])
-                # if the resized image is smaller than the template, then break
-                # from the loop
-                if resized.shape[0] < template_height or resized.shape[1] < template_width:
-                    break
-                
-                # detect edges in the resized, grayscale image and apply template
-                # matching to find the template in the image
-                edged = cv2.Canny(resized, 50, 200)
-                result = cv2.matchTemplate(edged, template, cv2.TM_CCOEFF)
-                (_, max_val, _, max_loc) = cv2.minMaxLoc(result)
-                # # check to see if the iteration should be visualized
-                # if args.get("visualize", False):
-                #     # draw a bounding box around the detected region
-                #     clone = np.dstack([edged, edged, edged])
-                #     cv2.rectangle(clone, (max_loc[0], max_loc[1]),
-                #         (max_loc[0] + template_width, max_loc[1] + template_height), (0, 0, 255), 2)
-                #     cv2.imshow("Visualize", clone)
-                #     cv2.waitKey(0)
-                # if we have found a new maximum correlation value, then update
-                # the bookkeeping variable
-                if found is None or max_val > found[0]:
-                    found = (max_val, max_loc, r)
-            # unpack the bookkeeping variable and compute the (x, y) coordinates
-            # of the bounding box based on the resized ratio
-            (_, max_loc, r) = found
-            (start_x, start_y) = (int(max_loc[0] * r), int(max_loc[1] * r))
-            (end_x, end_y) = (int((max_loc[0] + template_width) * r), int((max_loc[1] + template_height) * r))
-            
-            # draw a bounding box around the detected result and display the image
-            # cv2.rectangle(screenshot, (start_x, start_y), (end_x, end_y), (0, 0, 255), 2)
-            # cv2.imshow("Image", screenshot)
-            # cv2.waitKey(0)
-            self.detected_x, self.detected_y = (start_x + end_x) // 2, (start_y + end_y) // 2
-            self.button_detected = True
-            return self.detected_x, self.detected_y
 
 if __name__ == '__main__':
     z300_web_server = Z300WebServer()
