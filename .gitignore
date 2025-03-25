@@ -1,2 +1,9 @@
 .venv
 __pycache__
+thumbs.db
+export_button.png
+export_finish_button.png
+measure_button.png
+new_folder_button.png
+sample_name_input.png
+separate_spectrum_button.png
