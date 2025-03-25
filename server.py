@@ -19,7 +19,8 @@ class Z300WebServer:
         self.sio = socketio.Server(cors_allowed_origins='*', async_mode='eventlet')
         self.app = socketio.WSGIApp(self.sio)
 
-        self.libs_analyzer = LIBSAnalyzer(cache_folder_path='C:/Users/username/Desktop/Cache', export_folder_path='C:/Users/username/Desktop/Export')
+        # self.libs_analyzer = LIBSAnalyzer(cache_folder_path='C:/Users/LIBS_VM/sciaps/cache', export_folder_path='Y:/')
+        self.libs_analyzer = LIBSAnalyzer(cache_folder_path='C:/Users/Whittaker Lab/sciaps/cache', export_folder_path='C:/Users/Whittaker Lab/Documents/LIBS_auto_export')
 
         self.sio.on('connect', self.on_connect)
         self.sio.on('disconnect', self.on_disconnect)

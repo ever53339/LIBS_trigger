@@ -18,15 +18,16 @@ def disconnect():
 
 def status_hd(data):
     print(data)
-    print('received data')
+    # print('received data')
     
 a.on('status', status_hd)
 
 
 # a.connect('http://localhost:8080')
-a.connect('http://localhost:1234')
+a.connect('http://192.168.50.2:1234')
 # b = a.emit('get_status', 'data', callback=my_callback)
 # print(b)
 # c = a.emit('get_status_options', data=None)
 # print(c)
+a.emit('measure', 'data')
 a.wait()
