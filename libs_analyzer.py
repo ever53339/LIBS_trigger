@@ -5,6 +5,7 @@ import pyautogui
 import os
 from enum import Enum
 import time
+from datetime import datetime
 from typing import Tuple, List, Dict
 from pyvda import AppView, get_apps_by_z_order, VirtualDesktop, get_virtual_desktops
 
@@ -14,9 +15,9 @@ class AnalyzerStatus(Enum):
     RUNNING = 2
 
 
-class MeasurementTakesLongError(Exception):
-    """Exception raised when a measurement takes more than 10 seconds."""
-    def __init__(self, message: str = 'The measurement takes too long.') -> None:
+class TimeOutError(Exception):
+    """Exception raised when an operation takes too long."""
+    def __init__(self, message: str = 'The operation takes too long.') -> None:
         self.message = message
         super().__init__(self.message)
 
@@ -41,7 +42,15 @@ class UnkonwnButtonNameError(Exception):
 class LIBSAnalyzer:
     """Base driver class for the SciAps Z300 LIBS analyzer based on GUI automation."""
 
-    def __init__(self, cache_folder_path: str, export_folder_path: str, measure_button_img_path: str = 'measure_button.png', export_button_img_path: str = 'export_button.png') -> None:
+    def __init__(self, cache_folder_path: str, 
+                 export_folder_path: str, 
+                 measure_button_img_path: str = 'measure_button.png',
+                 sample_name_input_img_path: str = 'sample_name_input.png', 
+                 export_button_img_path: str = 'export_button.png',
+                 separate_spectrum_button_img_path: str = 'separate_spectrum_button.png',
+                 new_folder_button_img_path: str = 'new_folder_button.png',
+                 export_finish_button_img_path: str = 'export_finish_button.png',
+                 time_out: float = 15.0) -> None:
         """
         Initialize the LIBSAnalyzer.
 
@@ -49,29 +58,56 @@ class LIBSAnalyzer:
             cache_folder_path (str): Path to the folder where the analyzer stores measurement cache files.
             export_folder_path (str): Path to the folder where to store the exported data.
             measure_button_img_path (str, optional): Path to the image of the measurement button. Defaults to 'measure_button.png'.
+            sample_name_input_img_path (str, optional): Path to the image of the sample name input field. Defaults to 'sample_name_input.png'.
             export_button_img_path (str, optional): Path to the image of the export button. Defaults to 'export_button.png'.
+            separate_spectrum_button_img_path (str, optional): Path to the image of the separate spectrum button. Defaults to 'separate_spectrum_button.png'.
+            new_folder_button_img_path (str, optional): Path to the image of the new folder button. Defaults to 'new_folder_button.png'.
+            export_finish_button_img_path (str, optional): Path to the image of the export finish button. Defaults to 'export_finish_button.png'.
+            time_out (float, optional): Time out for operations. Defaults to 20.0.
         """
         self.cache_folder_path = cache_folder_path
         self.export_folder_path = export_folder_path
+        self.time_out = time_out
         self.buttons = {
             'measure': {
                 'pos': None,
                 'found': False,
                 'img_path': measure_button_img_path
             },
+            'sample_name': {
+                'pos': None,
+                'found': False,
+                'img_path': sample_name_input_img_path
+            },
             'export': {
                 'pos': None,
                 'found': False,
                 'img_path': export_button_img_path
+            },
+            'separate_spectrum': {
+                'pos': None,
+                'found': False,
+                'img_path': separate_spectrum_button_img_path
+            },
+            'new_folder': {
+                'pos': None,
+                'found': False,
+                'img_path': new_folder_button_img_path
+            },
+            'export_finish': {
+                'pos': None,
+                'found': False,
+                'img_path': export_finish_button_img_path
             }
         }
         self.status = AnalyzerStatus.IDLE
+        self.sample_name = ''
 
-        target_desktop = VirtualDesktop(1)
+        # target_desktop = VirtualDesktop(1)
             
-        target_desktop.go()
-        time.sleep(2)
-        self.find_all_buttons()
+        # target_desktop.go()
+        # time.sleep(2)
+        # self.find_all_buttons()
 
     def measure(self) -> None:
         """
@@ -86,20 +122,26 @@ class LIBSAnalyzer:
             self.status = AnalyzerStatus.RUNNING
             try:
                 n = len(os.listdir(self.cache_folder_path))
-                self.press_a_button('measure')          
+                self.press_a_button('measure')
+                print('measure button pressed')
             except Exception as e:
                 print(e)
                 raise
             else:
                 # check the number of files and folders in the cache folder
                 # if the number of files and folders increased, then the measurement is done
+                print(f'waiting for measurement to finish - {n}')
                 curr_t = time.time()
                 while len(os.listdir(self.cache_folder_path)) == n:
                     time.sleep(0.2)
-                    if time.time() - curr_t > 10:
-                        raise MeasurementTakesLongError()             
+                    elapsed = time.time() - curr_t
+                    print(f'elapsed time: {elapsed}')
+                    if elapsed > self.time_out:
+                        raise TimeOutError()
+                    print('measurement done')      
             finally:
                 self.status = AnalyzerStatus.IDLE
+                print('device status back to idle')
         
     def export(self) -> None:
         """
@@ -112,14 +154,45 @@ class LIBSAnalyzer:
             raise DeviceRunningError('The analyzer is currently running. Please wait until it is done. The requested export operation cannot be performed.')
         else:
             self.status = AnalyzerStatus.RUNNING
+            self.sample_name = self._name_after_time()
             try:
+                n = len(os.listdir(self.export_folder_path))
+                # follow the steps below
+                # 0. type in sample name
+                self.press_a_button('sample_name')
+                pyautogui.typewrite(self.sample_name)
+                # 1. press button already done
                 self.press_a_button('export')
-                # todo: complete export operation
+                print('export button pressed')
+                time.sleep(2.0)
+                # 2. type in directory and hit enter
+                pyautogui.typewrite(self.export_folder_path)
+                pyautogui.press('enter')
+                print('export folder path typed')
+                time.sleep(2.0)
+                # 3 choose save separate files
+                # choose save in a new folder
+                # hit export confirmation button
+                self.press_a_button('separate_spectrum')
+                self.press_a_button('new_folder')
+                self.press_a_button('export_finish')
+                print('export confirmation button pressed')
             except Exception as e:
                 print(e)
                 raise
+            else:
+                print(f'waiting for export to finish - {n}')
+                curr_t = time.time()
+                while len(os.listdir(self.export_folder_path)) == n:
+                    time.sleep(0.2)
+                    elapsed = time.time() - curr_t
+                    print(f'elapsed time: {elapsed}')
+                    if elapsed > self.time_out:
+                        raise TimeOutError()
+                print('export done') 
             finally:
                 self.status = AnalyzerStatus.IDLE
+                print('device status back to idle')
     
     def analyze(self) -> List[float]:
         """
@@ -162,6 +235,17 @@ class LIBSAnalyzer:
             raise ButtonNotFoundError(f'The button {button_name} was not found.')
         else:
             pyautogui.click(self.buttons[button_name]['pos'])
+
+    def _name_after_time(self) -> str:
+        now = datetime.now()
+        year = now.year
+        month = now.month
+        day = now.day
+        hour = now.hour
+        minute = now.minute
+        second = now.second
+        
+        return f'{year}_{month:02}_{day:02}_{hour:02}_{minute:02}_{second:02}'
 
     def find_all_buttons(self) -> None:
         """
