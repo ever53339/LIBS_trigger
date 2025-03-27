@@ -28,12 +28,13 @@ class Z300SocketIOServer(LIBSAnalyzer):
                  export_finish_button_img_path,
                  time_out):
         
-        super().__init__(cache_folder_path, export_folder_path, measure_button_img_path, sample_name_input_img_path,
-                         export_button_img_path, separate_spectrum_button_img_path, new_folder_button_img_path, 
-                         export_finish_button_img_path, time_out)
         self.sio = socketio.Server(cors_allowed_origins='*', async_mode='eventlet')
         self.app = socketio.WSGIApp(self.sio)
 
+        super().__init__(cache_folder_path, export_folder_path, measure_button_img_path, sample_name_input_img_path,
+                         export_button_img_path, separate_spectrum_button_img_path, new_folder_button_img_path, 
+                         export_finish_button_img_path, time_out, sleep_func=self.sio.sleep)
+        
         # self.libs_analyzer = LIBSAnalyzer(cache_folder_path='C:/Users/LIBS_VM/sciaps/cache', export_folder_path='Y:/')
         
         self.sio.on('connect', self.on_connect)
@@ -45,92 +46,93 @@ class Z300SocketIOServer(LIBSAnalyzer):
         self.sio.on('analyze', self.on_analyze)
         self.sio.on('find_buttons', self.on_find_buttons)
 
-    @override
-    def measure(self):
-        """
-        Perform a measurement operation.
+    # @override
+    # def measure(self):
+    #     """
+    #     Perform a measurement operation.
 
-        Raises:
-            DeviceRunningError: If the analyzer is currently running.
-        """
-        if self.status is not AnalyzerStatus.IDLE:
-            raise DeviceRunningError('The analyzer is currently running. Please wait until it is done. The requested measurement operation cannot be performed.')
-        else:
-            self.status = AnalyzerStatus.RUNNING
-            try:
-                n = len(os.listdir(self.cache_folder_path))
-                self.press_a_button('measure')
-                print('measure button pressed')  
-            except Exception as e:
-                print(e)
-                raise
-            else:
-                # check the number of files and folders in the cache folder
-                # if the number of files and folders increased, then the measurement is done
-                print(f'waiting for measurement to finish - {n}')
-                curr_t = time.time()
-                while len(os.listdir(self.cache_folder_path)) == n:
-                    self.sio.sleep(0.2)
-                    elapsed = time.time() - curr_t
-                    print(f'elapsed time: {elapsed}')
-                    if elapsed > self.time_out:
-                        raise TimeOutError()
-                print('measurement done')    
-            finally:
-                self.status = AnalyzerStatus.IDLE
-                print('device back to idle')
+    #     Raises:
+    #         DeviceRunningError: If the analyzer is currently running.
+    #     """
+    #     if self.status is not AnalyzerStatus.IDLE:
+    #         raise DeviceRunningError('The analyzer is currently running. Please wait until it is done. The requested measurement operation cannot be performed.')
+    #     else:
+    #         self.status = AnalyzerStatus.RUNNING
+    #         print('------------------------measurement started------------------------')
+    #         try:
+    #             n = len(os.listdir(self.cache_folder_path))
+    #             self.press_a_button('measure')
+    #             print('measure button pressed')  
+    #         except Exception as e:
+    #             print(e)
+    #             raise
+    #         else:
+    #             # check the number of files and folders in the cache folder
+    #             # if the number of files and folders increased, then the measurement is done
+    #             print(f'waiting for measurement to finish - {n}')
+    #             curr_t = time.time()
+    #             while len(os.listdir(self.cache_folder_path)) == n:
+    #                 self.sio.sleep(0.2)
+    #                 elapsed = time.time() - curr_t
+    #                 print(f'elapsed time: {elapsed}')
+    #                 if elapsed > self.time_out:
+    #                     raise TimeOutError()
+    #             print('------------------------measurement done------------------------')    
+    #         finally:
+    #             self.status = AnalyzerStatus.IDLE
+    #             print('device back to idle')
     
-    @override
-    def export(self) -> None:
-        """
-        Perform an export operation.
+    # @override
+    # def export(self) -> None:
+    #     """
+    #     Perform an export operation.
 
-        Raises:
-            DeviceRunningError: If the analyzer is currently running.
-        """
-        if self.status is not AnalyzerStatus.IDLE:
-            raise DeviceRunningError('The analyzer is currently running. Please wait until it is done. The requested export operation cannot be performed.')
-        else:
-            self.status = AnalyzerStatus.RUNNING
-            self.sample_name = self._name_after_time()
-            try:
-                n = len(os.listdir(self.export_folder_path))
-                # follow the steps below
-                # 0. type in sample name
-                self.press_a_button('sample_name')
-                pyautogui.typewrite(self.sample_name)
-                # 1. press button already done
-                self.press_a_button('export')
-                print('export button pressed')
-                self.sio.sleep(2.0)
-                # 2. type in directory and hit enter
-                pyautogui.typewrite(self.export_folder_path)
-                pyautogui.press('enter')
-                print('export folder path typed')
-                self.sio.sleep(2.0)
-                # 3 choose save separate files
-                # choose save in a new folder
-                # hit export confirmation button
-                self.press_a_button('separate_spectrum')
-                self.press_a_button('new_folder')
-                self.press_a_button('export_finish')
-                print('export confirmation button pressed')
-            except Exception as e:
-                print(e)
-                raise
-            else:
-                print(f'waiting for export to finish - {n}')
-                curr_t = time.time()
-                while len(os.listdir(self.export_folder_path)) == n:
-                    self.sio.sleep(0.2)
-                    elapsed = time.time() - curr_t
-                    print(f'elapsed time: {elapsed}')
-                    if elapsed > self.time_out:
-                        raise TimeOutError()
-                print('export done') 
-            finally:
-                self.status = AnalyzerStatus.IDLE
-                print('device back to idle')
+    #     Raises:
+    #         DeviceRunningError: If the analyzer is currently running.
+    #     """
+    #     if self.status is not AnalyzerStatus.IDLE:
+    #         raise DeviceRunningError('The analyzer is currently running. Please wait until it is done. The requested export operation cannot be performed.')
+    #     else:
+    #         self.status = AnalyzerStatus.RUNNING
+    #         self.sample_name = self._name_after_time()
+    #         try:
+    #             n = len(os.listdir(self.export_folder_path))
+    #             # follow the steps below
+    #             # 0. type in sample name
+    #             self.press_a_button('sample_name')
+    #             pyautogui.typewrite(self.sample_name)
+    #             # 1. press button already done
+    #             self.press_a_button('export')
+    #             print('export button pressed')
+    #             self.sio.sleep(2.0)
+    #             # 2. type in directory and hit enter
+    #             pyautogui.typewrite(self.export_folder_path)
+    #             pyautogui.press('enter')
+    #             print('export folder path typed')
+    #             self.sio.sleep(2.0)
+    #             # 3 choose save separate files
+    #             # choose save in a new folder
+    #             # hit export confirmation button
+    #             self.press_a_button('separate_spectrum')
+    #             self.press_a_button('new_folder')
+    #             self.press_a_button('export_finish')
+    #             print('export confirmation button pressed')
+    #         except Exception as e:
+    #             print(e)
+    #             raise
+    #         else:
+    #             print(f'waiting for export to finish - {n}')
+    #             curr_t = time.time()
+    #             while len(os.listdir(self.export_folder_path)) == n:
+    #                 self.sio.sleep(0.2)
+    #                 elapsed = time.time() - curr_t
+    #                 print(f'elapsed time: {elapsed}')
+    #                 if elapsed > self.time_out:
+    #                     raise TimeOutError()
+    #             print('export done') 
+    #         finally:
+    #             self.status = AnalyzerStatus.IDLE
+    #             print('device back to idle')
 
     def on_connect(self, sid, environ, auth):
         print('connect ', sid)
@@ -189,12 +191,12 @@ class Z300SocketIOServer(LIBSAnalyzer):
 if __name__ == '__main__':
     z300_web_server = Z300SocketIOServer(cache_folder_path='C:/Users/LIBS_VM/sciaps/cache/Z300-0915', 
                                          export_folder_path='Y:/',
-                                         measure_button_img_path='measure_button.png',
-                                         sample_name_input_img_path='sample_name_input.png',
-                                         export_button_img_path='export_button.png',
-                                         separate_spectrum_button_img_path='separate_spectrum_button.png',
-                                         new_folder_button_img_path='new_folder_button.png',
-                                         export_finish_button_img_path='export_finish_button.png',
+                                         measure_button_img_path='button_templates/measure_button.png',
+                                         sample_name_input_img_path='button_templates/sample_name_input.png',
+                                         export_button_img_path='button_templates/export_button.png',
+                                         separate_spectrum_button_img_path='button_templates/separate_spectrum_button.png',
+                                         new_folder_button_img_path='button_templates/new_folder_button.png',
+                                         export_finish_button_img_path='button_templates/export_finish_button.png',
                                          time_out=15.0)
     z300_web_server.sio.start_background_task(z300_web_server.update_status)
     eventlet.wsgi.server(eventlet.listen(('', 1234)), z300_web_server.app)

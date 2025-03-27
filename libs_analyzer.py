@@ -8,12 +8,13 @@ import time
 from datetime import datetime
 from typing import Tuple, List, Dict
 from pyvda import AppView, get_apps_by_z_order, VirtualDesktop, get_virtual_desktops
+from collections.abc import Callable
+import pandas as pd
 
 
 class AnalyzerStatus(Enum):
     IDLE = 1
     RUNNING = 2
-
 
 class TimeOutError(Exception):
     """Exception raised when an operation takes too long."""
@@ -50,7 +51,8 @@ class LIBSAnalyzer:
                  separate_spectrum_button_img_path: str = 'separate_spectrum_button.png',
                  new_folder_button_img_path: str = 'new_folder_button.png',
                  export_finish_button_img_path: str = 'export_finish_button.png',
-                 time_out: float = 15.0) -> None:
+                 time_out: float = 15.0,
+                 sleep_func: Callable[[float]] = time.sleep) -> None:
         """
         Initialize the LIBSAnalyzer.
 
@@ -64,10 +66,12 @@ class LIBSAnalyzer:
             new_folder_button_img_path (str, optional): Path to the image of the new folder button. Defaults to 'new_folder_button.png'.
             export_finish_button_img_path (str, optional): Path to the image of the export finish button. Defaults to 'export_finish_button.png'.
             time_out (float, optional): Time out for operations. Defaults to 20.0.
+            sleep_func (Callable, optional): Sleep function. Defaults to time.sleep.
         """
         self.cache_folder_path = cache_folder_path
         self.export_folder_path = export_folder_path
         self.time_out = time_out
+        self.sleep_func = sleep_func
         self.buttons = {
             'measure': {
                 'pos': None,
@@ -103,12 +107,6 @@ class LIBSAnalyzer:
         self.status = AnalyzerStatus.IDLE
         self.sample_name = ''
 
-        # target_desktop = VirtualDesktop(1)
-            
-        # target_desktop.go()
-        # time.sleep(2)
-        # self.find_all_buttons()
-
     def measure(self) -> None:
         """
         Perform a measurement operation.
@@ -120,6 +118,7 @@ class LIBSAnalyzer:
             raise DeviceRunningError('The analyzer is currently running. Please wait until it is done. The requested measurement operation cannot be performed.')
         else:
             self.status = AnalyzerStatus.RUNNING
+            print('------------------------measurement started------------------------')
             try:
                 n = len(os.listdir(self.cache_folder_path))
                 self.press_a_button('measure')
@@ -133,12 +132,12 @@ class LIBSAnalyzer:
                 print(f'waiting for measurement to finish - {n}')
                 curr_t = time.time()
                 while len(os.listdir(self.cache_folder_path)) == n:
-                    time.sleep(0.2)
+                    self.sleep_func(0.2)
                     elapsed = time.time() - curr_t
                     print(f'elapsed time: {elapsed}')
                     if elapsed > self.time_out:
                         raise TimeOutError()
-                    print('measurement done')      
+                print('------------------------measurement done------------------------')     
             finally:
                 self.status = AnalyzerStatus.IDLE
                 print('device status back to idle')
@@ -155,6 +154,7 @@ class LIBSAnalyzer:
         else:
             self.status = AnalyzerStatus.RUNNING
             self.sample_name = self._name_after_time()
+            print('------------------------export started------------------------')
             try:
                 n = len(os.listdir(self.export_folder_path))
                 # follow the steps below
@@ -164,12 +164,12 @@ class LIBSAnalyzer:
                 # 1. press button already done
                 self.press_a_button('export')
                 print('export button pressed')
-                time.sleep(2.0)
+                self.sleep_func(2.0)
                 # 2. type in directory and hit enter
                 pyautogui.typewrite(self.export_folder_path)
                 pyautogui.press('enter')
                 print('export folder path typed')
-                time.sleep(2.0)
+                self.sleep_func(2.0)
                 # 3 choose save separate files
                 # choose save in a new folder
                 # hit export confirmation button
@@ -184,12 +184,12 @@ class LIBSAnalyzer:
                 print(f'waiting for export to finish - {n}')
                 curr_t = time.time()
                 while len(os.listdir(self.export_folder_path)) == n:
-                    time.sleep(0.2)
+                    self.sleep_func(0.2)
                     elapsed = time.time() - curr_t
                     print(f'elapsed time: {elapsed}')
                     if elapsed > self.time_out:
                         raise TimeOutError()
-                print('export done') 
+                print('------------------------measurement done------------------------') 
             finally:
                 self.status = AnalyzerStatus.IDLE
                 print('device status back to idle')
@@ -208,15 +208,22 @@ class LIBSAnalyzer:
             raise DeviceRunningError('The analyzer is currently running. Please wait until it is done. The requested analysis operation cannot be performed.')
         else:
             self.status = AnalyzerStatus.RUNNING
+            print('------------------------analyzation started------------------------')
             try:
-                res = self.find_all_peaks('foo.csv')
+                spec_path = ''
+                for f in os.listdir(self.export_folder_path + '/' + self.sample_name):
+                    if f.endswith('3.csv'):
+                        spec_path = self.export_folder_path + '/' + self.sample_name + '/' + f
+                res = self.find_all_peaks(spec_path)
             except Exception as e:
                 print(e)
                 raise
             else:
+                print('------------------------analyzation done------------------------')
                 return res
             finally:
                 self.status = AnalyzerStatus.IDLE
+                print('device status back to idle')
 
     def press_a_button(self, button_name: str) -> None:
         """
@@ -237,6 +244,12 @@ class LIBSAnalyzer:
             pyautogui.click(self.buttons[button_name]['pos'])
 
     def _name_after_time(self) -> str:
+        """
+        Generate a sample name based on the current data and time. 
+
+        Returns:
+            str: generated sample name.
+        """
         now = datetime.now()
         year = now.year
         month = now.month
@@ -314,48 +327,6 @@ class LIBSAnalyzer:
         # cv2.waitKey(0)
         return (start_x + end_x) // 2, (start_y + end_y) // 2
 
-        screenshot_gray = cv2.cvtColor(np.array(screenshot), cv2.COLOR_RGB2GRAY)
-
-        template = cv2.imread(button_template_path, cv2.IMREAD_GRAYSCALE) # return shape(height * width, y * x)
-        template = cv2.Canny(template, 50, 200)
-        (template_height, template_width) = template.shape[:2]
-
-        found = None
-        # loop over the scales of the image
-        for scale in np.linspace(0.2, 2, 20)[::-1]:
-            # resize the image according to the scale, and keep track
-            # of the ratio of the resizing
-            resized = imutils.resize(screenshot_gray, width = int(screenshot_gray.shape[1] * scale))
-            r = screenshot_gray.shape[1] / float(resized.shape[1])
-            # if the resized image is smaller than the template, then break
-            # from the loop
-            if resized.shape[0] < template_height or resized.shape[1] < template_width:
-                break
-            
-            # detect edges in the resized, grayscale image and apply template
-            # matching to find the template in the image
-            edged = cv2.Canny(resized, 50, 200)
-            result = cv2.matchTemplate(edged, template, cv2.TM_CCOEFF)
-            (_, max_val, _, max_loc) = cv2.minMaxLoc(result)
-
-            # if we have found a new maximum correlation value, then update
-            # the bookkeeping variable
-            if found is None or max_val > found[0]:
-                found = (max_val, max_loc, r)
-        # unpack the bookkeeping variable and compute the (x, y) coordinates
-        # of the bounding box based on the resized ratio    
-        (_, max_loc, r) = found
-        (start_x, start_y) = (int(max_loc[0] * r), int(max_loc[1] * r))
-        (end_x, end_y) = (int((max_loc[0] + template_width) * r), int((max_loc[1] + template_height) * r))
-        
-        # draw a bounding box around the detected result and display the image
-        cv2.rectangle(screenshot_gray, (start_x, start_y), (end_x, end_y), (0, 0, 255), 2)
-        cv2.imshow(button_template_path, screenshot_gray)
-        cv2.waitKey(0)
-        self.detected_x, self.detected_y = (start_x + end_x) // 2, (start_y + end_y) // 2
-        # self.button_detected = True
-        return self.detected_x, self.detected_y
-
     def find_all_peaks(self, csv_file_path: str) -> List[float]:
         """
         Find all peaks in the given CSV file.
@@ -366,5 +337,19 @@ class LIBSAnalyzer:
         Returns:
             List[float]: A list of detected peaks.
         """
-        pass
-        #todo: finishi this method
+        # todo: naive implementation for now
+        df = pd.read_csv(csv_file_path, header=0)
+        x = df['wavelength'].to_numpy(dtype=float)
+        y = df['intensity'].to_numpy(dtype=float)
+
+        ranges = [(669.0, 673.0)]
+        areas = {}
+        for start, stop in ranges:
+            
+            start_idx = np.where(x >= start)[0][0]
+            stop_idx = np.where(x <= stop)[0][-1]
+
+            area = np.trapezoid(y[start_idx:stop_idx+1], x[start_idx:stop_idx+1]) - (y[start_idx] + y[stop_idx]) * (x[stop_idx] - x[start_idx]) / 2
+            areas[(start, stop)] = area
+
+        return areas
