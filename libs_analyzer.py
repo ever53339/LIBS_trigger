@@ -52,7 +52,7 @@ class LIBSAnalyzer:
                  new_folder_button_img_path: str = 'new_folder_button.png',
                  export_finish_button_img_path: str = 'export_finish_button.png',
                  time_out: float = 15.0,
-                 sleep_func: Callable[[float]] = time.sleep) -> None:
+                 sleep_func: Callable[[float], None] = time.sleep) -> None:
         """
         Initialize the LIBSAnalyzer.
 
@@ -189,7 +189,7 @@ class LIBSAnalyzer:
                     print(f'elapsed time: {elapsed}')
                     if elapsed > self.time_out:
                         raise TimeOutError()
-                print('------------------------measurement done------------------------') 
+                print('------------------------export done------------------------') 
             finally:
                 self.status = AnalyzerStatus.IDLE
                 print('device status back to idle')
@@ -213,7 +213,11 @@ class LIBSAnalyzer:
                 spec_path = ''
                 for f in os.listdir(self.export_folder_path + '/' + self.sample_name):
                     if f.endswith('3.csv'):
+                        print(f)
                         spec_path = self.export_folder_path + '/' + self.sample_name + '/' + f
+                        print(spec_path)
+                        break
+                
                 res = self.find_all_peaks(spec_path)
             except Exception as e:
                 print(e)
@@ -350,6 +354,6 @@ class LIBSAnalyzer:
             stop_idx = np.where(x <= stop)[0][-1]
 
             area = np.trapezoid(y[start_idx:stop_idx+1], x[start_idx:stop_idx+1]) - (y[start_idx] + y[stop_idx]) * (x[stop_idx] - x[start_idx]) / 2
-            areas[(start, stop)] = area
+            areas[f'{start} - {stop}'] = area
 
         return areas
