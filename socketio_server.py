@@ -150,7 +150,7 @@ class Z300SocketIOServer(LIBSAnalyzer):
                 print(e)
                 return str(e)
             else:
-                return 'measurement done successfully'
+                return 'success'
     
     def on_export(self, sid, data):
         if self.status == AnalyzerStatus.RUNNING:
@@ -162,7 +162,7 @@ class Z300SocketIOServer(LIBSAnalyzer):
                 print(e)
                 return str(e)
             else:
-                return 'export done successfully'
+                return 'success'
     
     def on_analyze(self, sid, data):
         if self.status == AnalyzerStatus.RUNNING:
@@ -171,9 +171,9 @@ class Z300SocketIOServer(LIBSAnalyzer):
             try:
                 res = self.analyze()
             except Exception as e:
-                return str(e)
+                return str(e), {'not_found': 0.0}
             else:
-                return res
+                return 'success', res 
 
     def on_find_buttons(self, sid, data):
         self.find_all_buttons()
