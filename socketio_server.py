@@ -26,6 +26,7 @@ class Z300SocketIOServer(LIBSAnalyzer):
                  separate_spectrum_button_img_path,
                  new_folder_button_img_path,
                  export_finish_button_img_path,
+                 delete_button_img_path,
                  time_out):
         
         self.sio = socketio.Server(cors_allowed_origins='*', async_mode='eventlet')
@@ -197,6 +198,7 @@ if __name__ == '__main__':
                                          separate_spectrum_button_img_path='button_templates/separate_spectrum_button.png',
                                          new_folder_button_img_path='button_templates/new_folder_button.png',
                                          export_finish_button_img_path='button_templates/export_finish_button.png',
+                                         delete_button_img_path='button_templates/delete_button.png'
                                          time_out=15.0)
     z300_web_server.sio.start_background_task(z300_web_server.update_status)
     eventlet.wsgi.server(eventlet.listen(('', 1234)), z300_web_server.app)
