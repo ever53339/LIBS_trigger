@@ -34,7 +34,7 @@ class Z300SocketIOServer(LIBSAnalyzer):
 
         super().__init__(cache_folder_path, export_folder_path, measure_button_img_path, sample_name_input_img_path,
                          export_button_img_path, separate_spectrum_button_img_path, new_folder_button_img_path, 
-                         export_finish_button_img_path, time_out, sleep_func=self.sio.sleep)
+                         export_finish_button_img_path, delete_button_img_path, time_out, sleep_func=self.sio.sleep)
         
         # self.libs_analyzer = LIBSAnalyzer(cache_folder_path='C:/Users/LIBS_VM/sciaps/cache', export_folder_path='Y:/')
         
