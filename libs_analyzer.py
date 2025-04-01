@@ -51,6 +51,7 @@ class LIBSAnalyzer:
                  separate_spectrum_button_img_path: str = 'separate_spectrum_button.png',
                  new_folder_button_img_path: str = 'new_folder_button.png',
                  export_finish_button_img_path: str = 'export_finish_button.png',
+                 delete_button_img_path: str = 'delete_button.png',
                  time_out: float = 15.0,
                  sleep_func: Callable[[float], None] = time.sleep) -> None:
         """
@@ -65,6 +66,7 @@ class LIBSAnalyzer:
             separate_spectrum_button_img_path (str, optional): Path to the image of the separate spectrum button. Defaults to 'separate_spectrum_button.png'.
             new_folder_button_img_path (str, optional): Path to the image of the new folder button. Defaults to 'new_folder_button.png'.
             export_finish_button_img_path (str, optional): Path to the image of the export finish button. Defaults to 'export_finish_button.png'.
+            delete_button_img_path (str, optional): Path to the image of the delete button. Defaults to 'delete_button.png'.
             time_out (float, optional): Time out for operations. Defaults to 20.0.
             sleep_func (Callable, optional): Sleep function. Defaults to time.sleep.
         """
@@ -102,6 +104,11 @@ class LIBSAnalyzer:
                 'pos': None,
                 'found': False,
                 'img_path': export_finish_button_img_path
+            },
+            'delete': {
+                'pos': None,
+                'found': False,
+                'img_path': delete_button_img_path
             }
         }
         self.status = AnalyzerStatus.IDLE
@@ -177,6 +184,10 @@ class LIBSAnalyzer:
                 self.press_a_button('new_folder')
                 self.press_a_button('export_finish')
                 print('export confirmation button pressed')
+
+                self.press_a_button('delete')
+                pyautogui.press('enter')
+                print('cache file deteted')
             except Exception as e:
                 print(e)
                 raise
