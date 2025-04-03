@@ -185,9 +185,13 @@ class LIBSAnalyzer:
                 self.press_a_button('export_finish')
                 print('export confirmation button pressed')
 
-                self.press_a_button('delete')
-                pyautogui.press('enter')
-                print('cache file deteted')
+                # self.sleep_func(2.0)
+                # self.press_a_button('delete')
+                # pyautogui.press('enter')
+                # print('cache file deteted')
+
+                # self.sleep_func(2.0)
+                # self.press_a_button('save')
             except Exception as e:
                 print(e)
                 raise
