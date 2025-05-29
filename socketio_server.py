@@ -199,6 +199,7 @@ if __name__ == '__main__':
                                          new_folder_button_img_path='button_templates/new_folder_button.png',
                                          export_finish_button_img_path='button_templates/export_finish_button.png',
                                          delete_button_img_path='button_templates/delete_button.png',
+                                         sync_button_img_path='button_templates/sync_button.png',
                                          time_out=15.0)
     z300_web_server.sio.start_background_task(z300_web_server.update_status)
     eventlet.wsgi.server(eventlet.listen(('', 1234)), z300_web_server.app)

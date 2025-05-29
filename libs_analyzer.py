@@ -52,6 +52,7 @@ class LIBSAnalyzer:
                  new_folder_button_img_path: str = 'new_folder_button.png',
                  export_finish_button_img_path: str = 'export_finish_button.png',
                  delete_button_img_path: str = 'delete_button.png',
+                 sync_button_img_path: str = 'sync_button.png',
                  time_out: float = 15.0,
                  sleep_func: Callable[[float], None] = time.sleep) -> None:
         """
@@ -109,6 +110,11 @@ class LIBSAnalyzer:
                 'pos': None,
                 'found': False,
                 'img_path': delete_button_img_path
+            },
+            'sync': {
+                'pos': None,
+                'found': False,
+                'img_path': sync_button_img_path
             }
         }
         self.status = AnalyzerStatus.IDLE
@@ -188,6 +194,10 @@ class LIBSAnalyzer:
                 self.press_a_button('delete')
                 pyautogui.press('enter')
                 print('cache file deteted')
+                self.sleep_func(1.0)
+                self.press_a_button('sync')
+                print('sync with LIBS analyzer')
+                
             except Exception as e:
                 print(e)
                 raise
@@ -223,7 +233,7 @@ class LIBSAnalyzer:
             try:
                 spec_path = ''
                 for f in os.listdir(self.export_folder_path + '/' + self.sample_name):
-                    if f.endswith('3.csv'):
+                    if f.endswith('1.csv'):
                         print(f)
                         spec_path = self.export_folder_path + '/' + self.sample_name + '/' + f
                         print(spec_path)
