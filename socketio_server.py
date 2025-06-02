@@ -27,6 +27,7 @@ class Z300SocketIOServer(LIBSAnalyzer):
                  new_folder_button_img_path,
                  export_finish_button_img_path,
                  delete_button_img_path,
+                 sync_button_img_path,
                  time_out):
         
         self.sio = socketio.Server(cors_allowed_origins='*', async_mode='eventlet')
@@ -34,7 +35,7 @@ class Z300SocketIOServer(LIBSAnalyzer):
 
         super().__init__(cache_folder_path, export_folder_path, measure_button_img_path, sample_name_input_img_path,
                          export_button_img_path, separate_spectrum_button_img_path, new_folder_button_img_path, 
-                         export_finish_button_img_path, delete_button_img_path, time_out, sleep_func=self.sio.sleep)
+                         export_finish_button_img_path, delete_button_img_path, sync_button_img_path, time_out, sleep_func=self.sio.sleep)
         
         # self.libs_analyzer = LIBSAnalyzer(cache_folder_path='C:/Users/LIBS_VM/sciaps/cache', export_folder_path='Y:/')
         
@@ -191,7 +192,7 @@ class Z300SocketIOServer(LIBSAnalyzer):
 
 if __name__ == '__main__':
     z300_web_server = Z300SocketIOServer(cache_folder_path='C:/Users/Whittaker/sciaps/cache/Z300-0915', 
-                                         export_folder_path='C:/Users/Whittaker/Documents/20250328LIBSAuto',
+                                         export_folder_path='C:/Users/Whittaker/Documents/20250529LIBSAuto',
                                          measure_button_img_path='button_templates/measure_button.png',
                                          sample_name_input_img_path='button_templates/sample_name_input.png',
                                          export_button_img_path='button_templates/export_button.png',

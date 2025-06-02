@@ -133,6 +133,8 @@ class LIBSAnalyzer:
             self.status = AnalyzerStatus.RUNNING
             print('------------------------measurement started------------------------')
             try:
+                pyautogui.press('enter')
+                self.sleep_func(0.5)
                 n = len(os.listdir(self.cache_folder_path))
                 self.press_a_button('measure')
                 print('measure button pressed')
@@ -173,29 +175,37 @@ class LIBSAnalyzer:
                 # follow the steps below
                 # 0. type in sample name
                 self.press_a_button('sample_name')
+                self.sleep_func(0.1)
                 pyautogui.typewrite(self.sample_name)
+                self.sleep_func(0.1)
                 # 1. press button already done
                 self.press_a_button('export')
                 print('export button pressed')
-                self.sleep_func(2.0)
+                self.sleep_func(1.0)
                 # 2. type in directory and hit enter
                 pyautogui.typewrite(self.export_folder_path)
+                self.sleep_func(0.1)
                 pyautogui.press('enter')
                 print('export folder path typed')
-                self.sleep_func(2.0)
+                self.sleep_func(1.0)
                 # 3 choose save separate files
                 # choose save in a new folder
                 # hit export confirmation button
                 self.press_a_button('separate_spectrum')
+                self.sleep_func(0.1)
                 self.press_a_button('new_folder')
+                self.sleep_func(0.1)
                 self.press_a_button('export_finish')
                 print('export confirmation button pressed')
-
+                self.sleep_func(0.5)
                 self.press_a_button('delete')
+                self.sleep_func(0.1)
                 pyautogui.press('enter')
                 print('cache file deteted')
-                self.sleep_func(1.0)
+                self.sleep_func(0.5)
                 self.press_a_button('sync')
+                self.sleep_func(0.5)
+                pyautogui.press('enter')
                 print('sync with LIBS analyzer')
                 
             except Exception as e:
